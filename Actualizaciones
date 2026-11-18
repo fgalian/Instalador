@@ -1,0 +1,258 @@
+#!/bin/bash
+
+#El fichero de configuración del servidor dhcp para efi es: snponly.efi
+#El fichero de configuración del servidor dhcp para normal es: undionly.kkpxe
+
+#El fichero está en /etc/dhcp/dhcpd.conf
+
+#https://talk.plesk.com/threads/how-to-install-php-5-6-40-on-plesk-18-0-58-and-debian-12-4.372983/
+https://ondrej-ppa-php.program-language.mirror.naxonet.net/
+
+
+sudo rm /etc/apt/sources.list
+
+sudo echo deb http://archive.ubuntu.com/ubuntu/ $(lsb_release --codename | cut -f2) main restricted universe multiverse > /etc/apt/sources.list
+sudo echo deb http://archive.ubuntu.com/ubuntu/ $(lsb_release --codename | cut -f2)-updates main restricted universe multiverse >> /etc/apt/sources.list
+sudo echo deb http://archive.ubuntu.com/ubuntu/ $(lsb_release --codename | cut -f2)-backports main restricted universe multiverse >> /etc/apt/sources.list
+sudo echo deb http://archive.canonical.com/ubuntu $(lsb_release --codename | cut -f2) partner >> /etc/apt/sources.list
+sudo echo deb http://archive.ubuntu.com/ubuntu/ $(lsb_release --codename | cut -f2)-security main restricted universe multiverse >> /etc/apt/sources.list
+
+#borrar libreoffice antiguo para instalar desde repositorios
+apt-get remove libreoffice* -y
+
+#Borrar accesos de amazon
+sudo rm -rf /usr/share/applications/ubuntu-amazon-default.desktop
+
+sudo apt-get remove unity-lens-shopping -y
+
+#Antiguo ya no vale
+#sudo add-apt-repository ppa:webupd8team/java -y
+sudo add-apt-repository ppa:linuxuprising/java -y
+sudo add-apt-repository ppa:libreoffice/ppa -y
+#sudo add-apt-repository ppa:otto-kesselgulasch/gimp-edge -y
+#sudo add-apt-repository ppa:otto-kesselgulasch/gimp -y
+#sudo add-apt-repository ppa:audacity-team/daily -y
+sudo add-apt-repository ppa:librecad-dev/librecad-stable -y
+sudo add-apt-repository ppa:inkscape.dev/stable -y
+#sudo add-apt-repository ppa:ubuntu-mozilla-security/ppa -y
+sudo add-apt-repository ppa:videolan/stable-daily -y
+sudo add-apt-repository ppa:yannubuntu/boot-repair -y
+sudo add-apt-repository ppa:maarten-baert/simplescreenrecorder -y
+sudo add-apt-repository ppa:ondrej/php -y
+sudo apt-add-repository -u 'deb http://www.geogebra.net/linux/ stable main' -y
+
+#obs studio
+sudo add-apt-repository ppa:obsproject/obs-studio -y
+
+
+#Fran Galian Repo
+#config
+#https://www.dynamsoft.com/codepool/linux-debian-reporisory-reprepro.html
+
+#Antiguo
+#sudo wget -O - http://repo.frangalian.com/frangalian.key | sudo apt-key add -
+#sudo echo deb http://repo.frangalian.com/ $(lsb_release --codename | cut -f2) main > /etc/apt/sources.list.d/frangalian.list
+
+#nuevo
+sudo echo deb [signed-by=/usr/share/keyrings/frangalian.gpg] http://repo.frangalian.com/ $(lsb_release --codename | cut -f2) main > /etc/apt/sources.list.d/frangalian.list
+sudo wget -O /usr/share/keyrings/frangalian.gpg http://repo.frangalian.com/frangalian.gpg
+
+
+
+#Exfat
+sudo apt-get install exfat-fuse exfatprogs -y
+
+
+#Anydesk Repo
+wget -qO - https://keys.anydesk.com/repos/DEB-GPG-KEY | apt-key add -
+echo "deb http://deb.anydesk.com/ all main" > /etc/apt/sources.list.d/anydesk-stable.list
+
+
+sudo apt-get remove --purge apparmor -y
+
+echo deb [arch=amd64 signed-by=/usr/share/keyrings/oracle-virtualbox-2016.gpg] https://download.virtualbox.org/virtualbox/debian $(lsb_release --codename | cut -f2) contrib > /etc/apt/sources.list.d/virtualbox.list
+
+
+#Compresores
+sudo apt-get install rar unrar unrar-free zip unzip unace unace-nonfree bzip2 lzop p7zip-full p7zip-rar gzip lzip -y
+sudo apt-get install xarchiver -y
+
+#https://costales.github.io/posts/ubuntu2004-replace-nautilus-nemo/
+
+#Utilidades
+sudo apt-get install curl cifs-utils nfs-common -y
+
+#WineHQ
+#sudo dpkg --add-architecture i386
+#wget -nc https://dl.winehq.org/wine-builds/Release.key
+#sudo apt-key add Release.key
+#sudo apt-add-repository https://dl.winehq.org/wine-builds/ubuntu/
+#rm Release.key
+
+#huellas digitales
+#sudo add-apt-repository ppa:fingerprint/fingerprint-gui -y
+
+#virtualbox
+#wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo apt-key add -
+#wget -q https://www.virtualbox.org/download/oracle_vbox.asc -O- | sudo apt-key add -
+wget -O- https://www.virtualbox.org/download/oracle_vbox_2016.asc | sudo gpg --yes --output /usr/share/keyrings/oracle-virtualbox-2016.gpg --dearmor
+
+
+
+#Mysql
+#wget https://dev.mysql.com/get/mysql-apt-config_0.8.12-1_all.deb
+#wget https://dev.mysql.com/get/mysql-apt-config_0.8.16-1_all.debsudo apt-get install curl -y
+#wget https://dev.mysql.com/get/mysql-apt-config_0.8.22-1_all.deb
+wget https://dev.mysql.com/get/mysql-apt-config_0.8.33-1_all.deb
+sudo dpkg -i mysql-apt-config_0.8.23-1_all.deb
+
+
+#Visual studio code y edge
+curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg
+
+sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
+
+#Edge (necesita gpg de microsoft)
+sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
+
+
+#Geogebra
+wget -q https://static.geogebra.org/linux/office@geogebra.org.gpg.key -O- | sudo apt-key add -
+sudo apt install geogebra-classic
+ 
+
+#Chrome
+wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+
+sudo apt-get update -y
+
+
+
+#Java 8 obsoleto
+#sudo apt-get install oracle-java8-installer -y
+sudo apt-get install oracle-java13-installer -y
+
+sudo apt-get install libreoffice libreoffice-base libreoffice-math libreoffice-help-es libreoffice-l10n-es -y
+
+sudo apt-get install firefox-locale-es -y
+sudo apt-get install virtualbox-6.1 -y
+
+
+#boot-repair
+
+#unetbootin
+#sudo add-apt-repository ppa:gezakovacs/ppa -y
+#sudo apt-get install sublime-text -y
+
+#Visual Studio code
+sudo apt-get install code -y
+
+#Añadir soporte huellas digitales
+#sudo apt-get install libbsapi policykit-1-fingerprint-gui fingerprint-gui -y
+
+#Dni electrónico
+sudo apt-get install pcscd pcsc-tools -y
+
+#Para añadir wineHQ
+#sudo apt-get install --install-recommends winehq-stable -y
+
+#Para añadir gimp
+#sudo apt-get install gimp gimp-help-es -y
+
+#Añadir audacity
+#sudo apt-get install audacity -y
+
+#Añadir librecad
+#sudo apt-get install librecad -y
+
+#Añadir inkscape
+#sudo apt-get install inkscape -y
+
+#Añadir gnupaint
+#sudo apt-get install gpaint -y
+
+#Añadir scilab
+#sudo apt-get install scilab -y
+
+#Añadir SweetHome 3D
+#sudo apt-get install sweethome3d -y
+
+#Chrome
+sudo apt-get install google-chrome-stable -y
+
+#sudo apt-get install unetbootin -y
+
+#instalar node 18
+#curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+#sudo apt-get install nodejs -y
+#sudo apt-get install npm -y
+#sudo apt-get install -y build-essential
+
+#instalar ionic
+#npm install -g ionic@latest cordova@latest
+
+#mover pantallas
+#sudo apt-get install compizconfig-settings-manager compiz-plugins -y
+
+#WinUSB
+#sudo add-apt-repository ppa:nilarimogard/webupd8 -y
+#sudo apt update -y
+#sudo apt install woeusb -y
+
+#msql
+sudo apt-get install mysql-client -y
+sudo apt-get install mysql-workbench-community -y
+
+#Grabación de escritorio
+sudo apt-get install simplescreenrecorder -y
+
+#Filezilla
+sudo apt-get install filezilla -y
+
+#OBS-Studio
+sudo apt install obs-studio -y
+
+#CPU-X
+sudo apt install cpu-x -y
+
+#glade
+sudo apt-get install glade -y
+
+sudo apt-get upgrade -y
+apt-get dist-upgrade -y
+
+#instalar anydesk
+sudo apt-get install anydesk -y
+
+sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+
+#sudo apt install brave-browser
+
+#para errores con la firma de los repositorios
+#wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+
+#Solucionar el problema no se admite la arquitectura 386
+#https://proyectosbeta.net/2018/05/solucionar-el-mensaje-repositorio-xyz-no-admite-la-arquitectura-i386/
+
+#Solucionar el problema del repositorio de java8
+#sudo apt-get --allow-releaseinfo-change update
+
+#quitar historial (unset HISTFILE)
+#añadir mi propio repo
+#cambiar puerto ssh al 30899
+
+#que de ip automática
+	#borrar hostname
+	#borrar hosts
+
+#quitar ipv6
+#https://linuxconfig.org/how-to-disable-ipv6-address-on-ubuntu-18-04-bionic-beaver-linux
+
+#Borrar kernel antiguos
+	
+
+#activar usuario root
+
+#borrar lastlog
+#ln -sfn /dev/null /var/log/lastlog
