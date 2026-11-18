@@ -28,6 +28,8 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 # Catalogo. Id debe coincidir con el ID de Winget, salvo las funciones opcionales de Windows.
 $Catalogo = @(
     [pscustomobject]@{ Nombre='Google Chrome'; Categoria='Ofimatica'; Id='Google.Chrome'; Perfil=@('Basico'); Especial='' ; Patron='Google Chrome' }
+    [pscustomobject]@{ Nombre='Mozilla Firefox'; Categoria='Ofimatica'; Id='Mozilla.Firefox'; Perfil=@('Basico'); Especial='' ; Patron='Mozilla Firefox|Firefox' }
+    [pscustomobject]@{ Nombre='Mozilla Thunderbird'; Categoria='Ofimatica'; Id='Mozilla.Thunderbird'; Perfil=@('Basico'); Especial='' ; Patron='Mozilla Thunderbird|Thunderbird' }
     [pscustomobject]@{ Nombre='AutoFirma'; Categoria='Ofimatica'; Id='SpanishGovernment.Autofirma'; Perfil=@('Basico'); Especial='' ; Patron='AutoFirma' }
     [pscustomobject]@{ Nombre='WinRAR'; Categoria='Utilidades'; Id='RARLab.WinRAR'; Perfil=@('Basico'); Especial='' ; Patron='WinRAR' }
     [pscustomobject]@{ Nombre='Adobe Acrobat Reader 64-bit'; Categoria='Ofimatica'; Id='Adobe.Acrobat.Reader.64-bit'; Perfil=@('Basico'); Especial='' ; Patron='Adobe Acrobat|Acrobat Reader' }
@@ -36,7 +38,6 @@ $Catalogo = @(
     [pscustomobject]@{ Nombre='GIMP'; Categoria='Multimedia'; Id='GIMP.GIMP'; Perfil=@('Basico'); Especial='' ; Patron='GIMP' }
     [pscustomobject]@{ Nombre='VLC'; Categoria='Multimedia'; Id='VideoLAN.VLC'; Perfil=@('Basico'); Especial='' ; Patron='VLC media player' }
     [pscustomobject]@{ Nombre='7-Zip'; Categoria='Utilidades'; Id='7zip.7zip'; Perfil=@('Basico'); Especial='' ; Patron='7-Zip' }
-    [pscustomobject]@{ Nombre='Notepad++'; Categoria='Utilidades'; Id='Notepad++.Notepad++'; Perfil=@('Basico','Administracion','Desarrollo'); Especial='' ; Patron='Notepad\+\+' }
     [pscustomobject]@{ Nombre='PowerToys'; Categoria='Utilidades'; Id='Microsoft.PowerToys'; Perfil=@('Basico'); Especial='' ; Patron='PowerToys' }
     [pscustomobject]@{ Nombre='Everything'; Categoria='Utilidades'; Id='voidtools.Everything'; Perfil=@('Basico'); Especial='' ; Patron='Everything' }
     [pscustomobject]@{ Nombre='Windows Terminal'; Categoria='Utilidades'; Id='Microsoft.WindowsTerminal'; Perfil=@('Administracion','Desarrollo'); Especial='' ; Patron='Windows Terminal' }
@@ -53,11 +54,14 @@ $Catalogo = @(
     [pscustomobject]@{ Nombre='.NET SDK 10'; Categoria='Desarrollo'; Id='Microsoft.DotNet.SDK.10'; Perfil=@('Desarrollo'); Especial='' ; Patron='Microsoft \.NET SDK 10|Microsoft \.NET SDK - 10' }
     [pscustomobject]@{ Nombre='DBeaver Community'; Categoria='Desarrollo'; Id='DBeaver.DBeaver.Community'; Perfil=@('Desarrollo'); Especial='' ; Patron='DBeaver' }
     [pscustomobject]@{ Nombre='Postman'; Categoria='Desarrollo'; Id='Postman.Postman'; Perfil=@('Desarrollo'); Especial='' ; Patron='Postman' }
+    [pscustomobject]@{ Nombre='Docker Desktop'; Categoria='Desarrollo'; Id='Docker.DockerDesktop'; Perfil=@('Desarrollo'); Especial='' ; Patron='Docker Desktop' }
+    [pscustomobject]@{ Nombre='Notepad++'; Categoria='Desarrollo'; Id='Notepad++.Notepad++'; Perfil=@('Basico','Administracion','Desarrollo'); Especial='' ; Patron='Notepad\+\+' }
     [pscustomobject]@{ Nombre='Microsoft Visual C++ Redistributable 2015-2022 x64'; Categoria='Frameworks'; Id='Microsoft.VCRedist.2015+.x64'; Perfil=@(); Especial='' ; Patron='Microsoft Visual C\+\+.*2015.*2022.*(x64|64-bit)' }
     [pscustomobject]@{ Nombre='Microsoft Visual C++ Redistributable 2015-2022 x86'; Categoria='Frameworks'; Id='Microsoft.VCRedist.2015+.x86'; Perfil=@(); Especial='' ; Patron='Microsoft Visual C\+\+.*2015.*2022.*(x86|32-bit)' }
     [pscustomobject]@{ Nombre='.NET Desktop Runtime 10'; Categoria='Frameworks'; Id='Microsoft.DotNet.DesktopRuntime.10'; Perfil=@(); Especial='' ; Patron='Microsoft (Windows|\.NET) Desktop Runtime -? 10' }
     [pscustomobject]@{ Nombre='.NET Desktop Runtime 8'; Categoria='Frameworks'; Id='Microsoft.DotNet.DesktopRuntime.8'; Perfil=@(); Especial='' ; Patron='Microsoft (Windows|\.NET) Desktop Runtime -? 8' }
     [pscustomobject]@{ Nombre='.NET Framework 3.5 (NetFx3)'; Categoria='Frameworks'; Id='WINDOWS_NETFX3'; Perfil=@(); Especial='NetFx35'; Patron='' }
+    [pscustomobject]@{ Nombre='Controles legacy de Visual Basic 6 (SP6)'; Categoria='Frameworks'; Id='WINDOWS_VB6CONTROLES'; Perfil=@(); Especial='VB6Controles'; Patron='' }
 )
 
 $RutaLogs = Join-Path $env:ProgramData 'InstaladorSoftware\Logs'
@@ -131,6 +135,14 @@ function Obtener-Instalados {
                 $feature = Get-WindowsOptionalFeature -Online -FeatureName NetFx3 -ErrorAction Stop
                 $app.Instalado = ($feature.State -eq 'Enabled')
             } catch { Escribir-Log "ADVERTENCIA al detectar .NET Framework 3.5: $($_.Exception.Message)" }
+        } elseif ($app.Especial -eq 'VB6Controles') {
+            try {
+                $encontrado = $false
+                foreach ($nombre in $nombres) {
+                    if ($nombre -match '(?i)Visual\s+Basic\s*6') { $encontrado = $true; break }
+                }
+                $app.Instalado = $encontrado
+            } catch { Escribir-Log "ADVERTENCIA al detectar controles de Visual Basic 6: $($_.Exception.Message)" }
         } elseif ($ids.ContainsKey($app.Id)) {
             $app.Instalado = $true
         } elseif ($app.Patron) {
@@ -241,6 +253,15 @@ $btnCerrar.Text = 'Cerrar'
 $btnCerrar.SetBounds(690, 587, 135, 36)
 $btnCerrar.Anchor = 'Bottom,Right'
 $form.Controls.Add($btnCerrar)
+# Marca de pie del formulario: version y autor, abajo del todo.
+$lblMarca = New-Object System.Windows.Forms.Label
+$lblMarca.Text = 'FG Tech Software V0.1.20261118'
+$lblMarca.Font = New-Object System.Drawing.Font('Segoe UI', 7.5)
+$lblMarca.ForeColor = [System.Drawing.Color]::DimGray
+$lblMarca.TextAlign = 'MiddleCenter'
+$lblMarca.SetBounds(20, 643, 810, 16)
+$lblMarca.Anchor = 'Bottom,Left,Right'
+$form.Controls.Add($lblMarca)
 
 # Las listas contienen objetos (no texto), lo que preserva el identificador al marcar.
 function Repintar-Listas {
@@ -362,6 +383,17 @@ if ($feature.State -ne 'Enabled') {
             $encoded = [Convert]::ToBase64String($bytes)
             $ejecutable = (Join-Path $PSHOME 'powershell.exe')
             $argumentos = "-NoProfile -NonInteractive -EncodedCommand $encoded"
+        } elseif ($script:AppActual.Especial -eq 'VB6Controles') {
+            $carpetaExtrasScript = Join-Path $PSScriptRoot 'Extras'
+            $carpetaExtrasDatos = Join-Path (Split-Path $RutaLogs -Parent) 'Extras'
+            $msiVB6 = @(Get-ChildItem -Path @($carpetaExtrasScript, $carpetaExtrasDatos) -Filter 'VB60SP6-KB2708437-*.msi' -ErrorAction SilentlyContinue)
+            if ($msiVB6.Count -eq 0) {
+                throw ("Falta el MSI de Visual Basic 6 SP6. Descarga VB60SP6-KB2708437-x86-ESN.msi de " +
+                    "https://www.microsoft.com/es-co/download/details.aspx?id=7030 y guardalo en " +
+                    "'$carpetaExtrasScript' o en '$carpetaExtrasDatos'.")
+            }
+            $ejecutable = (Join-Path $env:WinDir 'System32\msiexec.exe')
+            $argumentos = "/i `"$($msiVB6[0].FullName)`" /qn /norestart"
         }
         else {
             if (-not $WingetExe) { throw 'Winget no esta disponible en esta sesion.' }
@@ -388,7 +420,7 @@ $timer.Add_Tick({
         $script:ProcesoActual.Refresh()
         if (-not $script:ProcesoActual.HasExited) { return }
         $codigo = $script:ProcesoActual.ExitCode
-        if ($codigo -eq 0) {
+        if ($codigo -eq 0 -or $codigo -eq 3010) {
             Escribir-Log "OK: $($script:AppActual.Nombre)"
             $script:AppActual.Instalado = $true
         } else {
