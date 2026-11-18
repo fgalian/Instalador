@@ -25,7 +25,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     return
 }
 
-# Catalogo. Id debe coincidir con el ID de Winget, salvo OpenSSH Server.
+# Catalogo. Id debe coincidir con el ID de Winget, salvo las funciones opcionales de Windows.
 $Catalogo = @(
     [pscustomobject]@{ Nombre='Google Chrome'; Categoria='Ofimatica'; Id='Google.Chrome'; Perfil=@('Basico'); Especial='' ; Patron='Google Chrome' }
     [pscustomobject]@{ Nombre='AutoFirma'; Categoria='Ofimatica'; Id='SpanishGovernment.Autofirma'; Perfil=@('Basico'); Especial='' ; Patron='AutoFirma' }
@@ -53,6 +53,11 @@ $Catalogo = @(
     [pscustomobject]@{ Nombre='.NET SDK 10'; Categoria='Desarrollo'; Id='Microsoft.DotNet.SDK.10'; Perfil=@('Desarrollo'); Especial='' ; Patron='Microsoft \.NET SDK 10|Microsoft \.NET SDK - 10' }
     [pscustomobject]@{ Nombre='DBeaver Community'; Categoria='Desarrollo'; Id='DBeaver.DBeaver.Community'; Perfil=@('Desarrollo'); Especial='' ; Patron='DBeaver' }
     [pscustomobject]@{ Nombre='Postman'; Categoria='Desarrollo'; Id='Postman.Postman'; Perfil=@('Desarrollo'); Especial='' ; Patron='Postman' }
+    [pscustomobject]@{ Nombre='Microsoft Visual C++ Redistributable 2015-2022 x64'; Categoria='Frameworks'; Id='Microsoft.VCRedist.2015+.x64'; Perfil=@(); Especial='' ; Patron='Microsoft Visual C\+\+.*2015.*2022.*(x64|64-bit)' }
+    [pscustomobject]@{ Nombre='Microsoft Visual C++ Redistributable 2015-2022 x86'; Categoria='Frameworks'; Id='Microsoft.VCRedist.2015+.x86'; Perfil=@(); Especial='' ; Patron='Microsoft Visual C\+\+.*2015.*2022.*(x86|32-bit)' }
+    [pscustomobject]@{ Nombre='.NET Desktop Runtime 10'; Categoria='Frameworks'; Id='Microsoft.DotNet.DesktopRuntime.10'; Perfil=@(); Especial='' ; Patron='Microsoft (Windows|\.NET) Desktop Runtime -? 10' }
+    [pscustomobject]@{ Nombre='.NET Desktop Runtime 8'; Categoria='Frameworks'; Id='Microsoft.DotNet.DesktopRuntime.8'; Perfil=@(); Especial='' ; Patron='Microsoft (Windows|\.NET) Desktop Runtime -? 8' }
+    [pscustomobject]@{ Nombre='.NET Framework 3.5 (NetFx3)'; Categoria='Frameworks'; Id='WINDOWS_NETFX3'; Perfil=@(); Especial='NetFx35'; Patron='' }
 )
 
 $RutaLogs = Join-Path $env:ProgramData 'InstaladorSoftware\Logs'
@@ -66,6 +71,23 @@ function Escribir-Log([string]$Mensaje) {
     $linea = ('[{0}] {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Mensaje)
     Add-Content -LiteralPath $LogGeneral -Value $linea -Encoding UTF8
 }
+
+function Actualizar-Winget {
+    $comando = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if (-not $comando) {
+        try {
+            Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe -ErrorAction Stop
+        } catch {
+            Escribir-Log "No se pudo registrar App Installer: $($_.Exception.Message)"
+        }
+        $comando = Get-Command winget.exe -ErrorAction SilentlyContinue
+    }
+
+    $script:WingetExe = if ($comando) { $comando.Source } else { $null }
+    return [bool]$script:WingetExe
+}
+
+Actualizar-Winget | Out-Null
 
 function Obtener-Instalados {
     $ids = @{}
@@ -104,6 +126,11 @@ function Obtener-Instalados {
                 $cap = Get-WindowsCapability -Online -Name 'OpenSSH.Server~~~~0.0.1.0' -ErrorAction Stop
                 $app.Instalado = ($cap.State -eq 'Installed')
             } catch { Escribir-Log "ADVERTENCIA al detectar OpenSSH: $($_.Exception.Message)" }
+        } elseif ($app.Especial -eq 'NetFx35') {
+            try {
+                $feature = Get-WindowsOptionalFeature -Online -FeatureName NetFx3 -ErrorAction Stop
+                $app.Instalado = ($feature.State -eq 'Enabled')
+            } catch { Escribir-Log "ADVERTENCIA al detectar .NET Framework 3.5: $($_.Exception.Message)" }
         } elseif ($ids.ContainsKey($app.Id)) {
             $app.Instalado = $true
         } elseif ($app.Patron) {
@@ -137,21 +164,6 @@ $panelSuperior.SetBounds(16, 80, 810, 37)
 $panelSuperior.Anchor = 'Top,Left,Right'
 $form.Controls.Add($panelSuperior)
 
-$btnPerfilBasico = New-Object System.Windows.Forms.Button
-$btnPerfilBasico.Text = 'Perfil basico'
-$btnPerfilBasico.Size = New-Object System.Drawing.Size(120, 30)
-$panelSuperior.Controls.Add($btnPerfilBasico)
-
-$btnPerfilAdmin = New-Object System.Windows.Forms.Button
-$btnPerfilAdmin.Text = 'Administracion'
-$btnPerfilAdmin.Size = New-Object System.Drawing.Size(120, 30)
-$panelSuperior.Controls.Add($btnPerfilAdmin)
-
-$btnPerfilDev = New-Object System.Windows.Forms.Button
-$btnPerfilDev.Text = 'Desarrollo'
-$btnPerfilDev.Size = New-Object System.Drawing.Size(110, 30)
-$panelSuperior.Controls.Add($btnPerfilDev)
-
 $btnTodos = New-Object System.Windows.Forms.Button
 $btnTodos.Text = 'Seleccionar todo'
 $btnTodos.Size = New-Object System.Drawing.Size(120, 30)
@@ -162,13 +174,19 @@ $btnNinguno.Text = 'Limpiar seleccion'
 $btnNinguno.Size = New-Object System.Drawing.Size(120, 30)
 $panelSuperior.Controls.Add($btnNinguno)
 
+$btnWinget = New-Object System.Windows.Forms.Button
+$btnWinget.Text = 'Instalar winget'
+$btnWinget.Size = New-Object System.Drawing.Size(130, 30)
+$btnWinget.Visible = -not $WingetExe
+$panelSuperior.Controls.Add($btnWinget)
+
 $tabs = New-Object System.Windows.Forms.TabControl
 $tabs.SetBounds(18, 125, 813, 337)
 $tabs.Anchor = 'Top,Bottom,Left,Right'
 $form.Controls.Add($tabs)
 
 $Listas = @{}
-$Categorias = @('Ofimatica','Multimedia','Utilidades','Administracion','Desarrollo')
+$Categorias = @('Ofimatica','Multimedia','Utilidades','Administracion','Desarrollo','Frameworks')
 foreach ($categoria in $Categorias) {
     $tab = New-Object System.Windows.Forms.TabPage
     $tab.Text = $categoria
@@ -256,17 +274,6 @@ function Actualizar-Contador {
     $lblSeleccion.Text = "Seleccionados: $($seleccionados.Count) | Sin instalar: $($pendientes.Count) | Total catalogo: $($Catalogo.Count)"
 }
 
-function Marcar-Perfil([string]$Perfil) {
-    foreach ($categoria in $Categorias) {
-        $lista = $Listas[$categoria]
-        for ($i = 0; $i -lt $lista.Items.Count; $i++) {
-            $app = $lista.Items[$i].App
-            $lista.SetItemChecked($i, (($app.Perfil -contains $Perfil) -and (-not $app.Instalado)))
-        }
-    }
-    Actualizar-Contador
-}
-
 function Marcar-Todos([bool]$Seleccionar) {
     foreach ($categoria in $Categorias) {
         $lista = $Listas[$categoria]
@@ -291,7 +298,7 @@ $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = 550
 
 function Habilitar-Controles([bool]$Habilitar) {
-    foreach ($btn in @($btnPerfilBasico,$btnPerfilAdmin,$btnPerfilDev,$btnTodos,$btnNinguno,$btnInstalar,$btnActualizar,$btnCerrar)) {
+    foreach ($btn in @($btnTodos,$btnNinguno,$btnWinget,$btnInstalar,$btnActualizar,$btnCerrar)) {
         $btn.Enabled = $Habilitar
     }
     $tabs.Enabled = $Habilitar
@@ -337,6 +344,18 @@ if ($rule) {
     Enable-NetFirewallRule -Name 'OpenSSH-Server-In-TCP'
 } else {
     New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (TCP 22)' -Direction Inbound -Protocol TCP -LocalPort 22 -Action Allow | Out-Null
+}
+'@
+            $bytes = [System.Text.Encoding]::Unicode.GetBytes($comando)
+            $encoded = [Convert]::ToBase64String($bytes)
+            $ejecutable = (Join-Path $PSHOME 'powershell.exe')
+            $argumentos = "-NoProfile -NonInteractive -EncodedCommand $encoded"
+        } elseif ($script:AppActual.Especial -eq 'NetFx35') {
+            $comando = @'
+$ErrorActionPreference = 'Stop'
+$feature = Get-WindowsOptionalFeature -Online -FeatureName NetFx3
+if ($feature.State -ne 'Enabled') {
+    Enable-WindowsOptionalFeature -Online -FeatureName NetFx3 -All -NoRestart | Out-Host
 }
 '@
             $bytes = [System.Text.Encoding]::Unicode.GetBytes($comando)
@@ -401,17 +420,33 @@ foreach ($categoria in $Categorias) {
     })
 }
 
-$btnPerfilBasico.Add_Click({ Marcar-Perfil 'Basico' })
-$btnPerfilAdmin.Add_Click({ Marcar-Perfil 'Administracion' })
-$btnPerfilDev.Add_Click({ Marcar-Perfil 'Desarrollo' })
 $btnTodos.Add_Click({ Marcar-Todos $true })
 $btnNinguno.Add_Click({ Marcar-Todos $false })
+$btnWinget.Add_Click({
+    try {
+        Start-Process 'ms-windows-store://pdp/?ProductId=9NBLGGH4NNS1' -ErrorAction Stop
+        [System.Windows.Forms.MessageBox]::Show(
+            'Se ha abierto la ficha oficial de App Installer en Microsoft Store. Instala o actualiza la aplicacion y despues pulsa "Actualizar deteccion".',
+            'Instalar winget'
+        ) | Out-Null
+    } catch {
+        Escribir-Log "ERROR al abrir Microsoft Store para instalar App Installer: $($_.Exception.Message)"
+        [System.Windows.Forms.MessageBox]::Show(
+            "No se pudo abrir Microsoft Store. Instala App Installer desde https://apps.microsoft.com/detail/9nblggh4nns1.`r`n$($_.Exception.Message)",
+            'No se pudo abrir Microsoft Store',
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        ) | Out-Null
+    }
+})
 $btnActualizar.Add_Click({
     $lblEstado.Text = 'Comprobando aplicaciones instaladas...'
     $form.Refresh()
+    $wingetDisponible = Actualizar-Winget
+    $btnWinget.Visible = -not $wingetDisponible
     Obtener-Instalados
     Repintar-Listas
-    $lblEstado.Text = 'Deteccion actualizada.'
+    $lblEstado.Text = if ($wingetDisponible) { 'Deteccion actualizada. winget esta disponible.' } else { 'Deteccion actualizada. Instala App Installer para usar winget.' }
 })
 $btnLogs.Add_Click({ Start-Process explorer.exe -ArgumentList ('"' + $RutaLogs + '"') })
 $btnCerrar.Add_Click({ $form.Close() })
@@ -459,8 +494,7 @@ $form.Add_FormClosing({
 Escribir-Log 'Aplicacion iniciada.'
 Obtener-Instalados
 Repintar-Listas
-Marcar-Perfil 'Basico'
-if (-not $WingetExe) { $lblEstado.Text = 'AVISO: winget.exe no se encuentra. OpenSSH puede instalarse por separado.' }
+if (-not $WingetExe) { $lblEstado.Text = 'AVISO: instala App Installer con el boton "Instalar winget" para usar winget.' }
 [void]$form.ShowDialog()
 $timer.Dispose()
 $form.Dispose()
